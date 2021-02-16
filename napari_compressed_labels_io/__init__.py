@@ -4,6 +4,6 @@ except ImportError:
     __version__ = "unknown"
 
 from ._reader import get_zarr_reader
-from ._writer import napari_write_labels
+from ._writer import labels_to_zarr, label_image_pairs_to_zarr
 
 
