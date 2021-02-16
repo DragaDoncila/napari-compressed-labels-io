@@ -11,11 +11,11 @@ https://napari.org/docs/dev/plugins/for_plugin_developers.html
 """
 import numpy as np
 from napari_plugin_engine import napari_hook_implementation
+import zarr
 
-
-@napari_hook_implementation
-def napari_get_reader(path):
-    """A basic implementation of the napari_get_reader hook specification.
+@napari_hook_implementation(specname='napari_get_reader')
+def get_zarr_reader(path):
+    """Read single zarr labels layers into napari
 
     Parameters
     ----------
@@ -28,26 +28,21 @@ def napari_get_reader(path):
         If the path is a recognized format, return a function that accepts the
         same path or list of paths, and returns a list of layer data tuples.
     """
+
+    # if it's a list we don't deal with it yet
     if isinstance(path, list):
-        # reader plugins may be handed single path, or a list of paths.
-        # if it is a list, it is assumed to be an image stack...
-        # so we are only going to look at the first file.
-        path = path[0]
+        return None
 
     # if we know we cannot read the file, we immediately return None.
-    if not path.endswith(".npy"):
+    if not path.endswith(".zarr"):
         return None
 
     # otherwise we return the *function* that can read ``path``.
-    return reader_function
+    return read_zarr_labels
 
 
-def reader_function(path):
+def read_zarr_labels(path):
     """Take a path or list of paths and return a list of LayerData tuples.
-
-    Readers are expected to return data as a list of tuples, where each tuple
-    is (data, [add_kwargs, [layer_type]]), "add_kwargs" and "layer_type" are
-    both optional.
 
     Parameters
     ----------
@@ -64,15 +59,11 @@ def reader_function(path):
         Both "meta", and "layer_type" are optional. napari will default to
         layer_type=="image" if not provided
     """
-    # handle both a string and a list of strings
-    paths = [path] if isinstance(path, str) else path
-    # load all files into array
-    arrays = [np.load(_path) for _path in paths]
-    # stack arrays into single array
-    data = np.squeeze(np.stack(arrays))
-
+    # load zarr
+    data = zarr.open(path, mode='r')
+    
     # optional kwargs for the corresponding viewer.add_* method
     add_kwargs = {}
 
-    layer_type = "image"  # optional, default is "image"
+    layer_type = "labels"  # optional, default is "image"
     return [(data, add_kwargs, layer_type)]

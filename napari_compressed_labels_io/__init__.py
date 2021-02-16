@@ -3,7 +3,7 @@ try:
 except ImportError:
     __version__ = "unknown"
 
-from ._reader import napari_get_reader
-from ._writer import napari_get_writer, napari_write_image
+from ._reader import get_zarr_reader
+from ._writer import napari_write_labels
 
 
