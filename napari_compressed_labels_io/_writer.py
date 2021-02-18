@@ -95,41 +95,29 @@ def write_label_image_pairs(path, layer_data):
     List[str]
         paths written to file
     """
-    layers = [layer[0] for layer in layer_data]
-    shapes = [layer.shape for layer in layers]
+    shapes = [layer[0].shape for layer in layer_data]
     
-    
-    if not all([len(shape)==len(shapes[0]) for shape in shapes]):
+    # check for same number of slices - assume first dimension
+    # TODO: check which dimension is being scrolled through?
+    if not all([shape[0] == shapes[0][0] for shape in shapes]):
         return None
 
-    # check each shape is the same
-    for i in range(len(shapes[0])):
-        if not all([shpe[i] == shapes[0][i] for shpe in shapes]):
-            return None
-    
-    layer_shape = shapes[0]
-    n_pairs = layer_shape[0]
-    im_shape = layer_shape[1:]
+    n_pairs = shapes[0][0]
 
-
-    images = [layer for layer in layer_data if layer[2]=='image']
-    n_ims = len(images)
-
-    labels = [layer for layer in layer_data if layer[2]=='labels']
-    n_labels = len(labels)
     os.makedirs(path)
 
     # for each image/label on the stack
     for i in range(n_pairs):
-        f_out = os.path.join(path, i)
+        f_out = os.path.join(path, f'{i}')
         os.mkdir(f_out)
 
-        for (im, meta, _) in images+labels:
+        for (im, meta, _) in layer_data:
+            im_shape = im.shape[1:]
             out_zarr = zarr.open(
                 os.path.join(f_out, f"{meta['name']}_{i}"),
                 mode='w',
                 shape=im_shape
             )
-            out_zarr[:] = im[:]
+            out_zarr[:] = im[i]
 
-
+    return path
