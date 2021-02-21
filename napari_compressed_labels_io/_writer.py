@@ -114,7 +114,7 @@ def write_label_image_pairs(path, layer_data):
         for (im, meta, type) in layer_data:
             im_shape = im.shape[1:]
             out_zarr = zarr.open(
-                os.path.join(f_out, f"{meta['name']}_{i}"),
+                os.path.join(f_out, f"{meta['name']}"),
                 mode='w',
                 shape=im_shape,
                 dtype=im.dtype

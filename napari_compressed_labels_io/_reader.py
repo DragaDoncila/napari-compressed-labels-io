@@ -130,11 +130,13 @@ def read_layers(path, meta, l_type):
     return stacked_layers
 
 def get_slice_path(root, layer_name, current_pair, n):
+    # we're within one layer of a slice, so we just open dir as a zarr
     if n == 0:
         return root
-    
-    name_pth = f"{layer_name}_{current_pair}"
+ 
+    # we're at slice level, simply join root with layer name
     if n == 1:
-        return os.path.join(root, name_pth)
+        return os.path.join(root, layer_name)
     
-    return os.path.join(os.path.join(root, str(current_pair)), name_pth)
+    # we're above slice level, need to join with current_pair to get the appropriate slice
+    return os.path.join(os.path.join(root, str(current_pair)), layer_name)
