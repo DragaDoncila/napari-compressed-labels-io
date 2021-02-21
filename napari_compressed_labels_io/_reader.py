@@ -17,71 +17,68 @@ from glob import glob
 import dask.array as da
 import numpy as np
 
-@napari_hook_implementation(specname='napari_get_reader')
-def get_zarr_reader(path):
-    """Read single zarr labels layers into napari
+# @napari_hook_implementation(specname='napari_get_reader')
+# def get_zarr_reader(path):
+#     """Read single zarr labels layers into napari
 
-    Parameters
-    ----------
-    path : str or list of str
-        Path to file, or list of paths.
+#     Parameters
+#     ----------
+#     path : str or list of str
+#         Path to file, or list of paths.
 
-    Returns
-    -------
-    function or None
-        If the path is a recognized format, return a function that accepts the
-        same path or list of paths, and returns a list of layer data tuples.
-    """
+#     Returns
+#     -------
+#     function or None
+#         If the path is a recognized format, return a function that accepts the
+#         same path or list of paths, and returns a list of layer data tuples.
+#     """
 
-    # if it's a list we don't deal with it yet
-    if isinstance(path, list):
-        return None
+#     # if it's a list we don't deal with it yet
+#     if isinstance(path, list):
+#         return None
 
-    # if we know we cannot read the file, we immediately return None.
-    if not path.endswith(".zarr"):
-        return None
+#     # if we know we cannot read the file, we immediately return None.
+#     if not path.endswith(".zarr"):
+#         return None
 
-    # TODO: check that a .zarray file is at the top level inside the zarr to return quickly
-    # if it's actually a paired zarr or ome-zarr
-
-
-    # otherwise we return the *function* that can read ``path``.
-    return read_zarr_labels
+#     # TODO: check that a .zarray file is at the top level inside the zarr to return quickly
+#     # if it's actually a paired zarr or ome-zarr
 
 
-def read_zarr_labels(path):
-    """Take a path or list of paths and return a list of LayerData tuples.
+#     # otherwise we return the *function* that can read ``path``.
+#     return read_zarr_labels
 
-    Parameters
-    ----------
-    path : str or list of str
-        Path to file, or list of paths.
 
-    Returns
-    -------
-    layer_data : list of tuples
-        A list of LayerData tuples where each tuple in the list contains
-        (data, metadata, layer_type), where data is a numpy array, metadata is
-        a dict of keyword arguments for the corresponding viewer.add_* method
-        in napari, and layer_type is a lower-case string naming the type of layer.
-        Both "meta", and "layer_type" are optional. napari will default to
-        layer_type=="image" if not provided
-    """
-    # load zarr
-    data = zarr.open(path, mode='r')
+# def read_zarr_labels(path):
+#     """Take a path or list of paths and return a list of LayerData tuples.
+
+#     Parameters
+#     ----------
+#     path : str or list of str
+#         Path to file, or list of paths.
+
+#     Returns
+#     -------
+#     layer_data : list of tuples
+#         A list of LayerData tuples where each tuple in the list contains
+#         (data, metadata, layer_type), where data is a numpy array, metadata is
+#         a dict of keyword arguments for the corresponding viewer.add_* method
+#         in napari, and layer_type is a lower-case string naming the type of layer.
+#         Both "meta", and "layer_type" are optional. napari will default to
+#         layer_type=="image" if not provided
+#     """
+#     # load zarr
+#     data = zarr.open(path, mode='r')
     
-    # optional kwargs for the corresponding viewer.add_* method
-    add_kwargs = {}
+#     # optional kwargs for the corresponding viewer.add_* method
+#     add_kwargs = {}
 
-    layer_type = "labels"  # optional, default is "image"
-    return [(data, add_kwargs, layer_type)]
+#     layer_type = "labels"  # optional, default is "image"
+#     return [(data, add_kwargs, layer_type)]
 
 
 @napari_hook_implementation(specname='napari_get_reader')
 def get_label_image_stack(path):
-    if not path.endswith(".zarr"):
-        return None
-
     # a .zmeta file MUST be present for this stack to be read
     if not os.path.isfile(os.path.join(path, '.zmeta')):
         return None
@@ -92,11 +89,15 @@ def read_label_image_stack(path):
     with open(os.path.join(path, '.zmeta'), "r") as f:
         meta = json.load(f)
         
-        ims = read_layers(path, meta, 'image')
-        labels = read_layers(path, meta, 'labels')
+        all_layers = []
+        if 'image' in meta['data']:
+            ims = read_layers(path, meta, 'image')
+            all_layers.extend(ims)
+        if 'labels' in meta['data']:
+            labels = read_layers(path, meta, 'labels')
+            all_layers.extend(labels)
 
-        return ims + labels
-
+        return all_layers
 
 def read_layers(path, meta, l_type):
     npairs = meta['meta']['stack']
@@ -107,8 +108,7 @@ def read_layers(path, meta, l_type):
     layers = [[] for _ in range(len(layer_meta))]
     for i, name in enumerate(layer_names):
         for j in range(npairs):
-            name_pth = f"{name}_{j}"
-            slice_path = os.path.join(os.path.join(path, str(j)), name_pth)
+            slice_path = get_slice_path(path, name, j, npairs)
             layer_data = zarr.open(
                 slice_path,
                 mode='r'
@@ -128,3 +128,13 @@ def read_layers(path, meta, l_type):
         )
 
     return stacked_layers
+
+def get_slice_path(root, layer_name, current_pair, n):
+    if n == 0:
+        return root
+    
+    name_pth = f"{layer_name}_{current_pair}"
+    if n == 1:
+        return os.path.join(root, name_pth)
+    
+    return os.path.join(os.path.join(root, str(current_pair)), name_pth)
