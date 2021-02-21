@@ -9,13 +9,15 @@ see: https://napari.org/docs/dev/plugins/hook_specifications.html
 Replace code below accordingly.  For complete documentation see:
 https://napari.org/docs/dev/plugins/for_plugin_developers.html
 """
+import json
 from napari_plugin_engine import napari_hook_implementation
 import zarr
 import os
 from glob import glob
 import dask.array as da
+import numpy as np
 
-# @napari_hook_implementation(specname='napari_get_reader')
+@napari_hook_implementation(specname='napari_get_reader')
 def get_zarr_reader(path):
     """Read single zarr labels layers into napari
 
@@ -80,46 +82,49 @@ def get_label_image_stack(path):
     if not path.endswith(".zarr"):
         return None
 
-    dir_paths = glob(f'{path}/*')
-    if not all([os.path.isdir(pth) and pth[-1].isnumeric() for pth in dir_paths]):
+    # a .zmeta file MUST be present for this stack to be read
+    if not os.path.isfile(os.path.join(path, '.zmeta')):
         return None
-
-    for dir in dir_paths:
-        content_paths = glob(f'{dir}/*')
-        if not all([('image' in pth or 'labels' in pth) for pth in content_paths]):
-            return None
 
     return read_label_image_stack
 
 def read_label_image_stack(path):
-    dirs = sorted(glob(f'{path}/*'))
-    n_pairs = len(dirs)
+    with open(os.path.join(path, '.zmeta'), "r") as f:
+        meta = json.load(f)
+        
+        ims = read_layers(path, meta, 'image')
+        labels = read_layers(path, meta, 'labels')
 
-    content_paths = sorted(glob(f'{dirs[0]}/*'))
+        return ims + labels
 
-    layers = [[] for _ in range(len(content_paths))]
-    # TODO: delay this
-    layer_shapes = [zarr.open(pth).shape for pth in content_paths]
-    layer_names = ['_'.join(os.path.basename(pth).split('_')[:-2]) for pth in content_paths]
-    layer_types = ['image' if 'image' in pth else 'labels' for pth in content_paths]
 
-    for dir in dirs:
-        layer_paths = sorted(glob(f'{dir}/*'))
-        for i, pth in enumerate(layer_paths):
-            layers[i].append(zarr.open(pth, mode='r'))
-    
+def read_layers(path, meta, l_type):
+    npairs = meta['meta']['stack']
+
+    layer_meta = meta['data'][l_type]
+    layer_names = [im['name'] for im in layer_meta]
+
+    layers = [[] for _ in range(len(layer_meta))]
+    for i, name in enumerate(layer_names):
+        for j in range(npairs):
+            name_pth = f"{name}_{j}"
+            slice_path = os.path.join(os.path.join(path, str(j)), name_pth)
+            layer_data = zarr.open(
+                slice_path,
+                mode='r'
+            )
+            layers[i].append(layer_data)
+
     stacked_layers = []
     for i, layer in enumerate(layers):
         stacked = da.stack(layer)
         add_kwargs = {
             'name': layer_names[i]
         }
-        layer_type = layer_types[i]
-        if layer_type == 'image':
+        if 'rgb' in layer_meta[i]:
             add_kwargs['rgb'] = True
-            add_kwargs['contrast_limits'] = (0, 1)
         stacked_layers.append(
-            (stacked, add_kwargs, layer_type)
+            (stacked, add_kwargs, l_type)
         )
 
     return stacked_layers
