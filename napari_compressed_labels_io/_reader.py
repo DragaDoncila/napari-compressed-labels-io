@@ -12,6 +12,54 @@ import dask.array as da
 import numpy as np
 
 @napari_hook_implementation(specname='napari_get_reader')
+def get_zarr_labels(path):
+    """Read a single labels layer from zarr into napari
+
+    Parameters
+    ----------
+    path : str or list of str
+        path(s) to try reading
+
+    Returns
+    -------
+    callable or None
+        callable if path is a zarr file with a .zarray at the top level, otherwise None
+    """
+    if isinstance(path, str):
+        path = [path]
+    
+    # all paths must end with zarr
+    if not all(pth.endswith('.zarr') for pth in path):
+        return None
+    
+    # all paths must have a .zarray file at the top level
+    if not all(os.path.isfile(os.path.join(pth, '.zarray')) for pth in path):
+        return None
+
+    return read_zarr_labels
+
+def read_zarr_labels(path):
+    """Read a single stack of zarr labels into napari
+
+    Parameters
+    ----------
+    path : str or list of str
+        path to read labels from
+
+    Returns
+    -------
+    list of tuples (data, meta, layer_type)
+       layers read from path 
+    """
+    data = zarr.open(path, mode='r')
+
+    add_kwargs = {}
+
+    layer_type = 'labels'
+
+    return [(data, add_kwargs, layer_type)]
+
+@napari_hook_implementation(specname='napari_get_reader')
 def get_label_image_stack(path):
     """Returns a reader for a stack of corresponding image and label slices.
     
