@@ -6,7 +6,50 @@
 [![tests](https://github.com/DragaDoncila/napari-compressed-labels-io/workflows/tests/badge.svg)](https://github.com/DragaDoncila/napari-compressed-labels-io/actions)
 [![codecov](https://codecov.io/gh/DragaDoncila/napari-compressed-labels-io/branch/master/graph/badge.svg)](https://codecov.io/gh/DragaDoncila/napari-compressed-labels-io)
 
-Plugin exploring different options for reading and writing compressed and portable labels layers in napari.
+
+## Description
+
+This napari plugin provides a reader and writer for stacks of 3D images with associated labels.
+
+The writer will save the images and labels in individual zarrs corresponding to each slice, making use of a .zmeta file whose specification is described below. The reader will then allow the loading of the entire stack of all layers, all layers of an individual slice or a single layer of an individual slice. The intent of this plugin is to provide a portable format for labels and their images while maintaining the flexiblity of opening parts of the stack as individual images.
+
+## .zmeta
+
+This metadata file contains information about the layer types in the stack and in each individual slice, as well as the number of image/label slices. This allows the reader plugin to load the correct layer types with appropriate names both at a stack level and at the individual slice level.
+
+### An example .zmeta specification
+
+```json
+{
+    "meta": {
+        "stack": 7                               # number of slices in the entire stack (1 for an individual slice, 0 for a layer within a slice)
+    },
+    "data": {
+        "image" : [                              # all image layers must be listed here
+            {
+                "name": "leaves_example_data",
+                "shape": [790, 790, 3],
+                "dtype": "uint8",
+                "rgb": true                      # where rgb is false the image will be loaded as greyscale (colormap support has not yet been implemented)
+            }
+        ],
+        "labels" : [
+            {
+                "name": "oak",
+                "shape": [790, 790],
+                "dtype": "int64"
+            },
+            {
+                "name": "bg",
+                "shape": [790, 790],
+                "dtype": "int64"
+            }
+        ]
+    }
+}
+
+```
+
 
 ----------------------------------
 
