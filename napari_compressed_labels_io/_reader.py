@@ -1,14 +1,8 @@
 """
-This module is an example of a barebones numpy reader plugin for napari.
-
-It implements the ``napari_get_reader`` hook specification, (to create
-a reader plugin) but your plugin may choose to implement any of the hook
-specifications offered by napari.
-see: https://napari.org/docs/dev/plugins/hook_specifications.html
-
-Replace code below accordingly.  For complete documentation see:
-https://napari.org/docs/dev/plugins/for_plugin_developers.html
+This module provides a reader for image stacks and their corresponding labels in zarr 
+format.
 """
+
 import json
 from napari_plugin_engine import napari_hook_implementation
 import zarr
@@ -17,75 +11,47 @@ from glob import glob
 import dask.array as da
 import numpy as np
 
-# @napari_hook_implementation(specname='napari_get_reader')
-# def get_zarr_reader(path):
-#     """Read single zarr labels layers into napari
-
-#     Parameters
-#     ----------
-#     path : str or list of str
-#         Path to file, or list of paths.
-
-#     Returns
-#     -------
-#     function or None
-#         If the path is a recognized format, return a function that accepts the
-#         same path or list of paths, and returns a list of layer data tuples.
-#     """
-
-#     # if it's a list we don't deal with it yet
-#     if isinstance(path, list):
-#         return None
-
-#     # if we know we cannot read the file, we immediately return None.
-#     if not path.endswith(".zarr"):
-#         return None
-
-#     # TODO: check that a .zarray file is at the top level inside the zarr to return quickly
-#     # if it's actually a paired zarr or ome-zarr
-
-
-#     # otherwise we return the *function* that can read ``path``.
-#     return read_zarr_labels
-
-
-# def read_zarr_labels(path):
-#     """Take a path or list of paths and return a list of LayerData tuples.
-
-#     Parameters
-#     ----------
-#     path : str or list of str
-#         Path to file, or list of paths.
-
-#     Returns
-#     -------
-#     layer_data : list of tuples
-#         A list of LayerData tuples where each tuple in the list contains
-#         (data, metadata, layer_type), where data is a numpy array, metadata is
-#         a dict of keyword arguments for the corresponding viewer.add_* method
-#         in napari, and layer_type is a lower-case string naming the type of layer.
-#         Both "meta", and "layer_type" are optional. napari will default to
-#         layer_type=="image" if not provided
-#     """
-#     # load zarr
-#     data = zarr.open(path, mode='r')
-    
-#     # optional kwargs for the corresponding viewer.add_* method
-#     add_kwargs = {}
-
-#     layer_type = "labels"  # optional, default is "image"
-#     return [(data, add_kwargs, layer_type)]
-
-
 @napari_hook_implementation(specname='napari_get_reader')
 def get_label_image_stack(path):
+    """Returns a reader for a stack of corresponding image and label slices.
+    
+    Checks for the existence of .zmeta file at path and returns reader if this exists,
+    otherwise None.
+
+    Parameters
+    ----------
+    path : str or list of str
+        path to try reading
+
+    Returns
+    -------
+    callable or None
+        reader for layers if path can be read, otherwise None
+    """
+    if isinstance(path, str):
+        path = [path]
+
     # a .zmeta file MUST be present for this stack to be read
-    if not os.path.isfile(os.path.join(path, '.zmeta')):
-        return None
+    for pth in path:
+        if not os.path.isfile(os.path.join(pth, '.zmeta')):
+            return None
 
     return read_label_image_stack
 
 def read_label_image_stack(path):
+    """Returns stacked images and labels layers from the given path using
+    .zmeta file
+
+    Parameters
+    ----------
+    path : str
+        path to label and/or image stacks
+
+    Returns
+    -------
+    list of tuples (data, meta, layer_type)
+       layers read from path 
+    """
     with open(os.path.join(path, '.zmeta'), "r") as f:
         meta = json.load(f)
         
@@ -138,5 +104,5 @@ def get_slice_path(root, layer_name, current_pair, n):
     if n == 1:
         return os.path.join(root, layer_name)
     
-    # we're above slice level, need to join with current_pair to get the appropriate slice
+    # we're at stack level, need to join with current_pair to get the appropriate slice
     return os.path.join(os.path.join(root, str(current_pair)), layer_name)
