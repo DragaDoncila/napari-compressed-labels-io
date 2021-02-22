@@ -121,33 +121,36 @@ def read_layers(path, meta, l_type):
 
     layers = [[] for _ in range(len(layer_meta))]
     for i, name in enumerate(layer_names):
-        for j in range(npairs):
-            slice_path = get_slice_path(path, name, j, npairs)
+        if npairs == 0:
             layer_data = zarr.open(
-                slice_path,
+                path,
                 mode='r'
             )
             layers[i].append(layer_data)
+        else:
+            for j in range(npairs):
+                slice_path = get_slice_path(path, name, j, npairs)
+                layer_data = zarr.open(
+                    slice_path,
+                    mode='r'
+                )
+                layers[i].append(layer_data)
 
-    stacked_layers = []
-    for i, layer in enumerate(layers):
-        stacked = da.stack(layer)
-        add_kwargs = {
-            'name': layer_names[i]
-        }
-        if 'rgb' in layer_meta[i]:
-            add_kwargs['rgb'] = True
-        stacked_layers.append(
-            (stacked, add_kwargs, l_type)
+        stacked_layers = []
+        for i, layer in enumerate(layers):
+            stacked = da.stack(layer)
+            add_kwargs = {
+                'name': layer_names[i]
+            }
+            if 'rgb' in layer_meta[i]:
+                add_kwargs['rgb'] = True
+            stacked_layers.append(
+                (stacked, add_kwargs, l_type)
         )
 
     return stacked_layers
 
 def get_slice_path(root, layer_name, current_pair, n):
-    # we're within one layer of a slice, so we just open dir as a zarr
-    if n == 0:
-        return root
- 
     # we're at slice level, simply join root with layer name
     if n == 1:
         return os.path.join(root, layer_name)
