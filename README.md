@@ -9,9 +9,36 @@
 
 ## Description
 
-This napari plugin provides a reader and writer for stacks of 3D images with associated labels.
+This napari plugin provides readers and writers for labels and their corresponding image layers into zarr format for compression and portability. Each reader/writer pair supports a round trip of saving and loading image and labels layers.
 
-The writer will save the images and labels in individual zarrs corresponding to each slice, making use of a .zmeta file whose specification is described below. The reader will then allow the loading of the entire stack of all layers, all layers of an individual slice or a single layer of an individual slice. The intent of this plugin is to provide a portable format for labels and their images while maintaining the flexiblity of opening parts of the stack as individual images.
+## Writers
+Two writers are provided by this plugin, each with its own reader.
+
+### `labels_to_zarr`
+This writer is an alternative to napari's default label writer and will write an entire labels layer, regardless of its dimensions, into a single zarr file. This writer provides the best compression option and its associated reader `get_zarr_labels` will read the layer back into napari.
+
+This writer will be called when the user tries to save a selected labels layer into a path ending with .zarr
+
+### `label_image_pairs_to_zarr`
+This writer will save 3-dimensional labels and image layers from the viewer into individual zarrs for portability and convenience. For example, given one labels and one image layer of the shape (10, 200, 200) saved to my_stacks.zarr, 10 subdirectories will be created, each with two zarrs inside of shape (200, 200) corresponding to the labels and image layer.
+
+This writer allows users to load stacks of associated images, label them, and then quickly save these stacks out into individual slices for easy loading, viewing and interaction. Its associated reader supports the loading into napari of the whole stack, all layers at one slice of the stack, and an individual layer of a given slice of the stack.
+
+The writer currently supports only 3D layers, with the exception of RGB images of the form (z, y, x, 3), which are also supported.
+
+
+## Readers
+
+Two readers are provided by this plugin for loading the formats saved by each writer. These are detailed below.
+
+### `get_zarr_labels`
+
+This reader will open any zarr file with a .zarray at the top level in `path` as a labels layer. This is to be used in conjunction with `labels_to_zarr`.
+
+
+### `get_label_image_stack`
+
+This reader will open any zarr containing a `.zmeta` file as layers into napari. Depending on what is being opened, the reader will either load a full stack of labels and images, one slice of a stack of images and labels or an individual layer within a slice. This is to be used in conjunction with `label_image_pairs_to_zarr`.
 
 ## .zmeta
 
