@@ -123,7 +123,7 @@ def write_label_image_pairs(path, layer_data):
             # write individual layer slice zmeta
             layer_info = {
                 'name': meta['name'],
-                'shape': im.shape,
+                'shape': slice_shape,
                 'dtype': im.dtype.name,
             }
             if l_type == 'image' and meta['rgb']:
