@@ -136,16 +136,16 @@ def read_layers(path, meta, l_type):
                 )
                 layers[i].append(layer_data)
 
-        stacked_layers = []
-        for i, layer in enumerate(layers):
-            stacked = da.stack(layer)
-            add_kwargs = {
-                'name': layer_names[i]
-            }
-            if 'rgb' in layer_meta[i]:
-                add_kwargs['rgb'] = True
-            stacked_layers.append(
-                (stacked, add_kwargs, l_type)
+    stacked_layers = []
+    for i, layer in enumerate(layers):
+        stacked = da.stack(layer)
+        add_kwargs = {
+            'name': layer_names[i]
+        }
+        if 'rgb' in layer_meta[i]:
+            add_kwargs['rgb'] = True
+        stacked_layers.append(
+            (stacked, add_kwargs, l_type)
         )
 
     return stacked_layers
