@@ -51,7 +51,7 @@ def read_zarr_labels(path):
     list of tuples (data, meta, layer_type)
        layers read from path 
     """
-    data = zarr.open(path, mode='r')
+    data = np.asarray(zarr.open(path, mode='r'))
 
     add_kwargs = {}
 
@@ -138,7 +138,7 @@ def read_layers(path, meta, l_type):
 
     stacked_layers = []
     for i, layer in enumerate(layers):
-        stacked = da.stack(layer)
+        stacked = np.asarray(da.stack(layer))
         add_kwargs = {
             'name': layer_names[i]
         }
