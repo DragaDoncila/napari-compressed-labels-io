@@ -50,29 +50,29 @@ def labels_to_zarr(path, data, meta):
     return path
 
 
-@napari_hook_implementation(specname='napari_get_writer')
-def label_image_pairs_to_zarr(path, layer_types):
-    """Given a 3D label layer and 3D stack of images, write corresponding
-    image/label pairs to individual zarrs
+# @napari_hook_implementation(specname='napari_get_writer')
+# def label_image_pairs_to_zarr(path, layer_types):
+#     """Given a 3D label layer and 3D stack of images, write corresponding
+#     image/label pairs to individual zarrs
 
-    Parameters
-    ----------
-    path : str or list of str
-        Path(s) to write layers
-    layer_types : list of str
-        List of layer types that will be provided to the writer function. This
-        implementation supports image and label types
-    """
-    if isinstance(path, str):
-        path = [path]
+#     Parameters
+#     ----------
+#     path : str or list of str
+#         Path(s) to write layers
+#     layer_types : list of str
+#         List of layer types that will be provided to the writer function. This
+#         implementation supports image and label types
+#     """
+#     if isinstance(path, str):
+#         path = [path]
     
-    if not all([pth.endswith('.zarr') for pth in path]):
-        return None
+#     if not all([pth.endswith('.zarr') for pth in path]):
+#         return None
 
-    if not all([layer == 'image' or layer == 'labels' for layer in layer_types]):
-        return None
+#     if not all([layer == 'image' or layer == 'labels' for layer in layer_types]):
+#         return None
 
-    return write_label_image_pairs
+#     return write_label_image_pairs
 
 def write_label_image_pairs(path, layer_data):
     """Write stack of labels and images into individual zarrs sorted into

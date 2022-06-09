@@ -1,0 +1,20 @@
+name: napari hub Preview Page
+on:
+  pull_request:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+jobs:
+  preview-page:
+    name: Preview Page Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: napari hub Preview Page Builder
+        uses: DragaDoncila/napari-hub-preview-action@install-plugin
+        with:
+          hub-ref: dev-add-npe2-lambda
