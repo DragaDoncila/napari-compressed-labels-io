@@ -17,4 +17,4 @@ jobs:
       - name: napari hub Preview Page Builder
         uses: DragaDoncila/napari-hub-preview-action@install-plugin
         with:
-          hub-ref: dev-preview-manifest
+          hub-ref: dev-add-npe2-lambda
